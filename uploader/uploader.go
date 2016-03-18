@@ -32,6 +32,7 @@ var (
 	regex         = flag.String("regex", "", "Regex to filter files and folders. If provided, only files matching the regex will be evaluated and metadata uploaded.")
 	verbose       = flag.Bool("v", true, "Verbose mode - should we print directories we are handling")
 	extraVerbose  = flag.Bool("vv", false, "Very verbose - should we print details about every file")
+	limit         = flag.Int("limit", -1, "Count of files we should limit ourselves to")
 )
 
 var (
@@ -90,6 +91,7 @@ func main() {
 	flag.Parse()
 	check()
 	var list []*fileInfo
+	count := 0
 	err := filepath.Walk(*path, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Skipping %s - %v", filePath, err)
@@ -109,14 +111,22 @@ func main() {
 				if *verbose {
 					fmt.Printf("%s\n", filePath)
 				}
-			} else if *extraVerbose {
-				fmt.Println(item)
+				// Treat every dir as separate entry
+				list = []*fileInfo{}
+			} else {
+				if *extraVerbose {
+					fmt.Println(item)
+				}
+				count++
+				if *limit > 0 && count >= *limit {
+					return fmt.Errorf("Limit of %v reached", *limit)
+				}
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error iterating %s - %v", *path, err)
+		fmt.Fprintf(os.Stderr, "Error iterating %s - %v\n", *path, err)
 	}
 }
 
