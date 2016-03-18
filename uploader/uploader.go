@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/michielbuddingh/spamsum"
 )
 
@@ -197,7 +196,7 @@ func addHashes(filePath string, item *fileInfo) {
 	var ssdeep = ""
 	sum, err := spamsum.HashReadSeeker(file, item.Size)
 	if err != nil {
-		logrus.WithError(err).Errorf("Could not compute SSDeep")
+		fmt.Fprintf(os.Stderr, "Could not compute SSDeep for %s - %v\n", filePath, err)
 	} else {
 		ssdeep = sum.String()
 	}
