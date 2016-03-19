@@ -14,7 +14,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
+	"github.com/demisto/tools/client"
 	"github.com/michielbuddingh/spamsum"
 )
 
@@ -33,33 +35,57 @@ var (
 	verbose       = flag.Bool("v", true, "Verbose mode - should we print directories we are handling")
 	extraVerbose  = flag.Bool("vv", false, "Very verbose - should we print details about every file")
 	limit         = flag.Int("limit", -1, "Count of files we should limit ourselves to")
+	test          = flag.Bool("test", false, "Should we just iterate on the files without uploading them")
 )
 
 var (
 	r *regexp.Regexp
+	c *client.Client
+	u *client.User
 )
 
+func printAndExit(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, args...)
+	os.Exit(1)
+}
+
 func check() {
-	/*
+	if !*test {
 		if *username == "" {
-			fmt.Fprintln(os.Stderr, "Please provide the username")
-			os.Exit(1)
+			printAndExit("Please provide the username\n")
 		}
 		if *password == "" {
-			fmt.Fprintln(os.Stderr, "Please provide the password")
-			os.Exit(1)
+			printAndExit("Please provide the password\n")
 		}
 		if *server == "" {
-			fmt.Fprintln(os.Stderr, "Please provide the Demisto server URL")
-			os.Exit(1)
-		}*/
+			printAndExit("Please provide the Demisto server URL\n")
+		}
+	}
 	if *regex != "" {
 		var err error
 		r, err = regexp.Compile(*regex)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid regex - %v\n", err)
-			os.Exit(1)
+			printAndExit("Invalid regex - %v\n", err)
 		}
+	}
+}
+
+func login() {
+	var err error
+	c, err = client.New(*username, *password, *server)
+	if err != nil {
+		printAndExit("Error creating the client - %v\n", err)
+	}
+	u, err = c.Login()
+	if err != nil {
+		printAndExit("Error creating the client - %v\n", err)
+	}
+	fmt.Printf("Logged in successfully with user %s [%s %s]\n", u.Username, u.Name, u.Email)
+}
+
+func logout() {
+	if err := c.Logout(); err != nil {
+		printAndExit("Unable to logout - %v\n", err)
 	}
 }
 
@@ -71,15 +97,15 @@ type fileInfo struct {
 	AccessedStr string
 	Changed     int64
 	ChangedStr  string
-	Path        string
+	Path        string `json:"1. Path"`
 	Type        string
-	Size        int64
+	Size        int64 `json:"2. Size"`
 	Mode        string
-	MD5         string
-	SHA1        string
-	SHA256      string
-	SHA512      string
-	SSDeep      string
+	MD5         string `json:"3. MD5"`
+	SHA1        string `json:"4. SHA1"`
+	SHA256      string `json:"5. SHA256"`
+	SHA512      string `json:"6. SHA512"`
+	SSDeep      string `json:"7. SSDeep"`
 }
 
 func (f *fileInfo) String() string {
@@ -87,15 +113,38 @@ func (f *fileInfo) String() string {
 		f.Path, f.CreatedStr, f.AccessedStr, f.ChangedStr, f.Size, f.Mode, f.MD5, f.SHA1, f.SHA256, f.SHA512, f.SSDeep)
 }
 
+func currInvestigationName(prefix, path string) string {
+	if strings.HasPrefix(path, prefix) {
+		actualPath := path[len(prefix):]
+		if actualPath[0] == '/' || actualPath[0] == os.PathSeparator {
+			actualPath = actualPath[1:]
+		}
+		parts := strings.Split(actualPath, string(os.PathSeparator))
+		if len(parts) > 0 {
+			return parts[0]
+		}
+	}
+	return ""
+}
+
 func main() {
 	flag.Parse()
 	check()
+	if !*test {
+		login()
+		defer logout()
+	}
 	var list []*fileInfo
+	var currInvestigation *client.Investigation
 	count := 0
 	err := filepath.Walk(*path, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Skipping %s - %v", filePath, err)
 			// Just ignore the ones we have no permission to see
+			return nil
+		}
+		// Ignore root directory
+		if filePath == *path {
 			return nil
 		}
 		skip := false
@@ -110,6 +159,28 @@ func main() {
 			if info.IsDir() {
 				if *verbose {
 					fmt.Printf("%s\n", filePath)
+				}
+				// Every top level directory is an investigation
+				if len(list) > 0 {
+					currName := currInvestigationName(*path, filePath)
+					if currInvestigation == nil || currName != currInvestigation.Name {
+						inc, err := c.CreateIncident(&client.Incident{Type: "Malware", Name: currName, Status: 0, Level: 1, Targets: []client.Target{{Value: currName, Type: "Host"}}})
+						if err != nil {
+							return err
+						}
+						if *verbose {
+							fmt.Printf("Incident %s created with ID %s\n", currName, inc.ID)
+						}
+						inv, err := c.Investigate(inc.ID, inc.Version)
+						if err != nil {
+							return err
+						}
+						currInvestigation = inv
+					}
+					_, err = c.AddEntryToInvestigation(currInvestigation.ID, list, "table")
+					if err != nil {
+						return err
+					}
 				}
 				// Treat every dir as separate entry
 				list = []*fileInfo{}
@@ -127,6 +198,12 @@ func main() {
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error iterating %s - %v\n", *path, err)
+	}
+	if len(list) > 0 {
+		_, err = c.AddEntryToInvestigation(currInvestigation.ID, list, "table")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error saving last batch %s - %v\n", *path, err)
+		}
 	}
 }
 
