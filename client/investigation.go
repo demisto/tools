@@ -133,6 +133,6 @@ func (c *Client) AddEntryToInvestigation(investigationID string, entryData inter
 		return nil, err
 	}
 	res := &Entry{}
-	err = c.req("POST", "entryFormatted", bytes.NewBuffer(data), res)
+	err = c.req("POST", "entry/formatted", bytes.NewBuffer(data), res)
 	return res, err
 }
