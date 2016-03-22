@@ -3,6 +3,8 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"mime/multipart"
 	"time"
 
 	"github.com/demisto/server/domain"
@@ -91,13 +93,41 @@ func (c *Client) CreateIncident(inc *Incident) (*Incident, error) {
 		return nil, err
 	}
 	res := &Incident{}
-	err = c.req("POST", "incident", bytes.NewBuffer(data), res)
+	err = c.req("POST", "incident", "", bytes.NewBuffer(data), res)
 	return res, err
 }
 
 type investigation struct {
 	idVersion
 	Investigation *Investigation `json:"investigation"`
+}
+
+// IncidentAddAttachment adds an attachment to a given incident
+func (c *Client) IncidentAddAttachment(inc *Incident, file io.Reader, name, comment string) (*Incident, error) {
+	b := &bytes.Buffer{}
+	writer := multipart.NewWriter(b)
+	part, err := writer.CreateFormFile("file", name)
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return nil, err
+	}
+	if comment != "" {
+		part, err := writer.CreateFormField("comment")
+		if err != nil {
+			return nil, err
+		}
+		_, err = part.Write([]byte(comment))
+		if err != nil {
+			return nil, err
+		}
+	}
+	writer.Close()
+	res := &Incident{}
+	err = c.req("POST", "incident/upload/"+inc.ID, writer.FormDataContentType(), b, res)
+	return res, err
 }
 
 // Investigate a given incident, returns ID and version of invetigation created.
@@ -107,6 +137,6 @@ func (c *Client) Investigate(incidentID string, incidentVersion int64) (*Investi
 		return nil, err
 	}
 	res := &investigation{}
-	err = c.req("POST", "incident/investigate", bytes.NewBuffer(data), res)
+	err = c.req("POST", "incident/investigate", "", bytes.NewBuffer(data), res)
 	return res.Investigation, err
 }

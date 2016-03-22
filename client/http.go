@@ -93,13 +93,17 @@ func (c *Client) handleError(resp *http.Response) error {
 	return nil
 }
 
-func (c *Client) req(method, path string, body io.Reader, result interface{}) error {
+func (c *Client) req(method, path, contentType string, body io.Reader, result interface{}) error {
 	req, err := http.NewRequest(method, c.server+path, body)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-type", "application/json")
+	if contentType == "" {
+		req.Header.Add("Content-type", "application/json")
+	} else {
+		req.Header.Add("Content-type", contentType)
+	}
 	req.Header.Add(xsrfTokenKey, c.token)
 	resp, err := c.Do(req)
 	if err != nil {
@@ -134,11 +138,11 @@ func (c *Client) Login() (*User, error) {
 		return nil, err
 	}
 	u := &User{}
-	err = c.req("POST", "login", bytes.NewBuffer(creds), u)
+	err = c.req("POST", "login", "", bytes.NewBuffer(creds), u)
 	return u, err
 }
 
 // Logout from the Demisto server
 func (c *Client) Logout() error {
-	return c.req("POST", "logout", nil, nil)
+	return c.req("POST", "logout", "", nil, nil)
 }
