@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/demisto/tools/client"
@@ -49,7 +50,13 @@ func printAndExit(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func check() {
+func check(err error) {
+	if err != nil {
+		printAndExit("%v", err)
+	}
+}
+
+func checkFlags() {
 	if !*test {
 		if *username == "" {
 			printAndExit("Please provide the username\n")
@@ -129,80 +136,81 @@ func currInvestigationName(prefix, path string) string {
 
 func main() {
 	flag.Parse()
-	check()
+	checkFlags()
 	if !*test {
 		login()
 		defer logout()
 	}
-	var list []*fileInfo
-	var currInvestigation *client.Investigation
+	// First, iterate on all directories in the top level directory.
+	// For each directory, create an investigation and then collect all sub directories
+	topLevel, err := os.Open(*path)
+	check(err)
+	topLevelEntries, err := topLevel.Readdir(0)
+	check(err)
 	count := 0
-	err := filepath.Walk(*path, func(filePath string, info os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Skipping %s - %v", filePath, err)
-			// Just ignore the ones we have no permission to see
-			return nil
-		}
-		// Ignore root directory
-		if filePath == *path {
-			return nil
-		}
-		skip := false
-		if r != nil {
-			if !r.MatchString(filePath) {
-				skip = true
-			}
-		}
-		if !skip {
-			item := createItem(filePath, info)
-			list = append(list, item)
-			if info.IsDir() {
+	for i := range topLevelEntries {
+		if topLevelEntries[i].IsDir() {
+			currName := topLevelEntries[i].Name()
+			var subDirsList []string
+			var currInvestigation *client.Investigation
+			if !*test {
+				inc, err := c.CreateIncident(&client.Incident{Type: "Malware", Name: currName, Status: 0, Level: 1, Targets: []client.Target{{Value: currName, Type: "Host"}}})
+				check(err)
 				if *verbose {
-					fmt.Printf("%s\n", filePath)
+					fmt.Printf("Incident %s created with ID %s\n", currName, inc.ID)
 				}
-				// Every top level directory is an investigation
-				if len(list) > 0 {
-					currName := currInvestigationName(*path, filePath)
-					if currInvestigation == nil || currName != currInvestigation.Name {
-						inc, err := c.CreateIncident(&client.Incident{Type: "Malware", Name: currName, Status: 0, Level: 1, Targets: []client.Target{{Value: currName, Type: "Host"}}})
-						if err != nil {
-							return err
-						}
-						if *verbose {
-							fmt.Printf("Incident %s created with ID %s\n", currName, inc.ID)
-						}
-						inv, err := c.Investigate(inc.ID, inc.Version)
-						if err != nil {
-							return err
-						}
-						currInvestigation = inv
-					}
-					_, err = c.AddEntryToInvestigation(currInvestigation.ID, list, "table")
-					if err != nil {
-						return err
-					}
-				}
-				// Treat every dir as separate entry
-				list = []*fileInfo{}
+				currInvestigation, err = c.Investigate(inc.ID, inc.Version)
+				check(err)
 			} else {
-				if *extraVerbose {
-					fmt.Println(item)
+				fmt.Printf("Incident %s would have been created\n", currName)
+				currInvestigation = &client.Investigation{Name: currName}
+			}
+			err := filepath.Walk(filepath.Join(*path, currName), func(filePath string, info os.FileInfo, err error) error {
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Skipping %s - %v", filePath, err)
+					// Just ignore the ones we have no permission to see
+					return nil
 				}
-				count++
+				if info.IsDir() {
+					subDirsList = append(subDirsList, filePath)
+				}
+				return nil
+			})
+			check(err)
+			sort.Strings(subDirsList)
+			for _, k := range subDirsList {
+				if !*test {
+					info, err := os.Stat(k)
+					check(err)
+					_, err = c.AddEntryToInvestigation(currInvestigation.ID, createItem(k, info), "table")
+					check(err)
+				} else {
+					fmt.Printf("Would create entry for %s\n", k)
+				}
+				dirNode, err := os.Open(k)
+				check(err)
+				dirFiles, err := dirNode.Readdir(0)
+				check(err)
+				var list []*fileInfo
+				for i := range dirFiles {
+					if dirFiles[i].IsDir() {
+						continue
+					}
+					list = append(list, createItem(filepath.Join(k, dirFiles[i].Name()), dirFiles[i]))
+					count++
+				}
+				if len(list) > 0 {
+					if !*test {
+						_, err = c.AddEntryToInvestigation(currInvestigation.ID, list, "table")
+						check(err)
+					} else {
+						fmt.Printf("Would create entry %v\n", list)
+					}
+				}
 				if *limit > 0 && count >= *limit {
-					return fmt.Errorf("Limit of %v reached", *limit)
+					printAndExit("Limit of %v reached", *limit)
 				}
 			}
-		}
-		return nil
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error iterating %s - %v\n", *path, err)
-	}
-	if len(list) > 0 {
-		_, err = c.AddEntryToInvestigation(currInvestigation.ID, list, "table")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving last batch %s - %v\n", *path, err)
 		}
 	}
 }
