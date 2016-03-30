@@ -6,8 +6,6 @@ import (
 	"io"
 	"mime/multipart"
 	"time"
-
-	"github.com/demisto/server/domain"
 )
 
 // Target ...
@@ -83,7 +81,7 @@ type idVersion struct {
 
 type updateSeverity struct {
 	idVersion
-	Severity domain.Severity `json:"severity"`
+	Severity int `json:"severity"`
 }
 
 // CreateIncident in Demisto
