@@ -18,7 +18,7 @@ var (
 	username   = flag.String("u", "", "Username to login to the server")
 	password   = flag.String("p", "", "Password to login to the server")
 	server     = flag.String("s", "", "Demisto server URL")
-	verbose    = flag.Bool("v", true, "Verbose mode - should we print directories we are handling")
+	level      = flag.String("level", "low", "Incident level - low/medium/high/critical")
 )
 
 var (
@@ -87,7 +87,12 @@ func main() {
 	defer logout()
 	bodyData, err := ioutil.ReadFile(*body)
 	check(err)
-	incident := &client.Incident{Type: "Phishing", Name: *subject, Status: 0, Level: 1, Details: string(bodyData),
+	levels := map[string]int{"low": 1, "medium": 2, "high": 3, "critical": 4}
+	l := levels[*level]
+	if l == 0 {
+		l = 1
+	}
+	incident := &client.Incident{Type: "Phishing", Name: *subject, Status: 0, Level: l, Details: string(bodyData),
 		Targets: []client.Target{{Value: *target, Type: "Email"}},
 	}
 	inc, err := c.CreateIncident(incident)
