@@ -11,14 +11,15 @@ import (
 )
 
 var (
-	body       = flag.String("body", "", "The file to read the body from")
-	subject    = flag.String("subject", "FW: Your Invoice", "The subject for the email")
-	target     = flag.String("target", "user@acme.com", "Who is being phished")
-	attachment = flag.String("attachment", "", "The attachment file")
-	username   = flag.String("u", "", "Username to login to the server")
-	password   = flag.String("p", "", "Password to login to the server")
-	server     = flag.String("s", "", "Demisto server URL")
-	level      = flag.String("level", "low", "Incident level - low/medium/high/critical")
+	body         = flag.String("body", "", "The file to read the body from")
+	subject      = flag.String("subject", "FW: Your Invoice", "The subject for the email")
+	target       = flag.String("target", "user@acme.com", "Who is being phished")
+	attachment   = flag.String("attachment", "", "The attachment file")
+	username     = flag.String("u", "", "Username to login to the server")
+	password     = flag.String("p", "", "Password to login to the server")
+	server       = flag.String("s", "", "Demisto server URL")
+	level        = flag.String("level", "low", "Incident level - low/medium/high/critical")
+	incidentType = flag.String("type", "Phishing", "Incident type - default/phishing/malware/...")
 )
 
 var (
@@ -92,8 +93,8 @@ func main() {
 	if l == 0 {
 		l = 1
 	}
-	incident := &client.Incident{Type: "Phishing", Name: *subject, Status: 0, Level: l, Details: string(bodyData),
-		Targets: []client.Target{{Value: *target, Type: "Email"}},
+	incident := &client.Incident{Type: *incidentType, Name: *subject, Status: 0, Level: l, Details: string(bodyData),
+		Targets: []client.Target{{Value: *target, Type: "Email/from"}},
 	}
 	inc, err := c.CreateIncident(incident)
 	check(err)
