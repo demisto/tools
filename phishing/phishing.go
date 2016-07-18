@@ -94,7 +94,7 @@ func main() {
 		l = 1
 	}
 	incident := &client.Incident{Type: *incidentType, Name: *subject, Status: 0, Level: l, Details: string(bodyData),
-		Targets: []client.Target{{Value: *target, Type: "Email/from"}},
+		Labels: []client.Label{{Value: *target, Type: "Email/from"}},
 	}
 	inc, err := c.CreateIncident(incident)
 	check(err)

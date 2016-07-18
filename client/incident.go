@@ -9,7 +9,7 @@ import (
 )
 
 // Target ...
-type Target struct {
+type Label struct {
 	Value string `json:"value"`
 	Type  string `json:"type"`
 }
@@ -51,7 +51,7 @@ type Incident struct {
 	// Investigation that was opened as a result of the incoming event
 	Investigation string `json:"investigationId"`
 	// The targets involved
-	Targets []Target `json:"targets"`
+	Labels []Label `json:"labels"`
 	// Attachments
 	Attachments []Attachment `json:"attachment"`
 	// The details of the incident - reason, etc.
@@ -84,6 +84,49 @@ type updateSeverity struct {
 	Severity int `json:"severity"`
 }
 
+// Order struct holds a sort field and the direction of sorting
+type Order struct {
+	Field string `json:"field"`
+	Asc   bool   `json:"asc"`
+}
+
+// IncidentFilter allows for very simple filtering.
+type IncidentFilter struct {
+	Page              int       `json:"page,omitempty"`
+	Size              int       `json:"size,omitempty"`
+	Sort              []Order   `json:"sort,omitempty"`
+	ID                []string  `json:"id,omitempty"`                // list of IDs to filter by
+	Type              []string  `json:"type,omitempty"`              // list of sources
+	Name              []string  `json:"name,omitempty"`              // list of sources
+	Status            []int     `json:"status,omitempty"`            // list of statuses we are interested in
+	NotStatus         []int     `json:"notStatus,omitempty"`         // list of statuses we are not interested in
+	Reason            []string  `json:"reason,omitempty"`            // The reason for resolve
+	FromDate          time.Time `json:"fromDate,omitempty"`          // filter from date
+	ToDate            time.Time `json:"toDate,omitempty"`            // filter to date
+	FromClosedDate    time.Time `json:"fromClosedDate,omitempty"`    // filter from date
+	ToClosedDate      time.Time `json:"toClosedDate,omitempty"`      // filter to date
+	FromActivatedDate time.Time `json:"fromActivatedDate,omitempty"` // filter from date
+	ToActivatedDate   time.Time `json:"toActivatedDate,omitempty"`   // filter to date
+	FromDueDate       time.Time `json:"fromDueDate,omitempty"`       // filter from date
+	ToDueDate         time.Time `json:"toDueDate,omitempty"`         // filter to date
+	Level             []int     `json:"level,omitempty"`             // filter based on severity
+	Investigation     []string  `json:"investigation,omitempty"`     // list of investigations we would like to filter by
+	Systems           []string  `json:"systems,omitempty"`           // list of systems affected
+	Files             []string  `json:"files,omitempty"`             // list of files affected
+	Urls              []string  `json:"urls,omitempty"`              // list of urls affected
+	Users             []string  `json:"users,omitempty"`             // list of users affected
+	Details           string    `json:"details,omitempty"`           // details for the query
+	AndOp             bool      `json:"andOp,omitempty"`             // should all fields match or at least one
+	Query             string    `json:"query,omitempty"`             // free query string
+	TotalOnly         bool      `json:"totalOnly"`                   // should return only total with no body
+}
+
+type SearchIncidentsData struct {
+	Filter       IncidentFilter `json:"filter"`
+	FilterByUser bool           `json:"userFilter"`
+	FetchInsight bool           `json:"fetchInsights"`
+}
+
 // CreateIncident in Demisto
 func (c *Client) CreateIncident(inc *Incident) (*Incident, error) {
 	data, err := json.Marshal(inc)
@@ -93,6 +136,11 @@ func (c *Client) CreateIncident(inc *Incident) (*Incident, error) {
 	res := &Incident{}
 	err = c.req("POST", "incident", "", bytes.NewBuffer(data), res)
 	return res, err
+}
+
+// Incidents search based on provided filter
+func (c *Client) Incidents(filter *IncidentFilter) ([]Incident, error) {
+	return nil, nil
 }
 
 type investigation struct {
