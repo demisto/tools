@@ -8,8 +8,4 @@ RUN mkdir /tmp/phantomjs \
     && mv /tmp/phantomjs/bin/phantomjs /usr/local/bin \
     && curl https://raw.githubusercontent.com/ariya/phantomjs/master/examples/rasterize.js > /usr/local/bin/rasterize.js
 
-# Run as non-root user
-RUN useradd --system --uid 72379 -m --shell /usr/sbin/nologin phantomjs
-USER phantomjs
-
 CMD ["python2"]
