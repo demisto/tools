@@ -1,0 +1,16 @@
+[
+  {
+    "path": "/SecurityService/Login",
+    "method": "POST",
+    "request": "login-req.xml",
+    "response": "login-resp.xml"
+  },
+  {
+    "path": "/SecurityService/Logout",
+    "method": "POST"
+  },
+  {
+    "path": "/ComponentService/GetComponentList",
+    "method": "POST"
+  }
+]
