@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/demisto/tools/client"
 )
@@ -88,13 +90,23 @@ func main() {
 	defer logout()
 	bodyData, err := ioutil.ReadFile(*body)
 	check(err)
+	bodyRE := regexp.MustCompile(`(?s)<body.*/body>`);
+	bodyText := bodyRE.Find(bodyData)
+	htmlRE := regexp.MustCompile(`<.*?>`)
+	bodyText = htmlRE.ReplaceAll(bodyText, []byte{})
+	bodyText = bytes.TrimSpace(bytes.Replace(bodyText, []byte("&nbsp;"), []byte{}, -1))
 	levels := map[string]int{"low": 1, "medium": 2, "high": 3, "critical": 4}
 	l := levels[*level]
 	if l == 0 {
 		l = 1
 	}
-	incident := &client.Incident{Type: *incidentType, Name: *subject, Status: 0, Level: l, Details: string(bodyData),
-		Labels: []client.Label{{Value: *target, Type: "Email/from"}},
+	incident := &client.Incident{Type: *incidentType, Name: *subject, Status: 0, Level: l, Details: string(bodyText),
+		Labels: []client.Label{
+			{Value: *target, Type: "Email/from"},
+			{Value: string(bodyText), Type: "Email/text"},
+			{Value: string(bodyData), Type: "Email/html"},
+			{Value: *subject, Type: "Email/subject"},
+		},
 	}
 	inc, err := c.CreateIncident(incident)
 	check(err)
