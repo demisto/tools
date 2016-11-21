@@ -1,4 +1,7 @@
-### This util unable you to parse BYOI yaml file into separated yamls files, each one includes a fucntion scripts.
+### This is a util script that generates the basic Automation scripts for a Demisto BYOI integration.
+### This gives you a good starting point from which to enhance your script to format output, handle errors etc. 
+### INPUTS: BYOI integration yaml file (such as those that appear in https://github.com/demisto/content/tree/master/Integrations )
+### OUTPUTS: One yaml file, containing the basic automation script, for each command in the provided integration.
 #consts
 IMPORT_FILE_PATH = 'Yml file path'
 EXPORT_FOLDER_PATH = 'output folder path'
