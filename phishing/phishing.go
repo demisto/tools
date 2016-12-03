@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/demisto/tools/client"
 )
@@ -22,6 +23,7 @@ var (
 	server       = flag.String("s", "", "Demisto server URL")
 	level        = flag.String("level", "low", "Incident level - low/medium/high/critical")
 	incidentType = flag.String("type", "Phishing", "Incident type - default/phishing/malware/...")
+	labels       = flag.String("labels", "", "The labels to add to the incident in the form of name=value,name=value")
 )
 
 var (
@@ -53,19 +55,18 @@ func checkParams() {
 	if *body == "" {
 		printAndExit("Please provide the body for the email\n")
 	}
-	if *attachment == "" {
-		printAndExit("Please provide the attachment to use\n")
-	}
 
 	bInfo, err := os.Stat(*body)
 	check(err)
 	if !bInfo.Mode().IsRegular() {
 		printAndExit("File [%s] must be a regular file\n", *body)
 	}
-	aInfo, err := os.Stat(*attachment)
-	check(err)
-	if !aInfo.Mode().IsRegular() {
-		printAndExit("File [%s] must be a regular file\n", *attachment)
+	if *attachment != "" {
+		aInfo, err := os.Stat(*attachment)
+		check(err)
+		if !aInfo.Mode().IsRegular() {
+			printAndExit("File [%s] must be a regular file\n", *attachment)
+		}
 	}
 }
 
@@ -90,7 +91,7 @@ func main() {
 	defer logout()
 	bodyData, err := ioutil.ReadFile(*body)
 	check(err)
-	bodyRE := regexp.MustCompile(`(?s)<body.*/body>`);
+	bodyRE := regexp.MustCompile(`(?s)<body.*/body>`)
 	bodyText := bodyRE.Find(bodyData)
 	htmlRE := regexp.MustCompile(`<.*?>`)
 	bodyText = htmlRE.ReplaceAll(bodyText, []byte{})
@@ -108,11 +109,22 @@ func main() {
 			{Value: *subject, Type: "Email/subject"},
 		},
 	}
+	if *labels != "" {
+		lParts := strings.Split(*labels, ",")
+		for _, lPart := range lParts {
+			l := strings.Split(lPart, "=")
+			if len(l) == 2 {
+				incident.Labels = append(incident.Labels, client.Label{Type: l[0], Value: l[1]})
+			}
+		}
+	}
 	inc, err := c.CreateIncident(incident)
 	check(err)
-	at, err := os.Open(*attachment)
-	check(err)
-	defer at.Close()
-	_, err = c.IncidentAddAttachment(inc, at, filepath.Base(*attachment), "Mail attachment")
-	check(err)
+	if *attachment != "" {
+		at, err := os.Open(*attachment)
+		check(err)
+		defer at.Close()
+		_, err = c.IncidentAddAttachment(inc, at, filepath.Base(*attachment), "Mail attachment")
+		check(err)
+	}
 }
