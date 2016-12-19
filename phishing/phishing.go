@@ -101,7 +101,7 @@ func main() {
 	if l == 0 {
 		l = 1
 	}
-	incident := &client.Incident{Type: *incidentType, Name: *subject, Status: 0, Level: l, Details: string(bodyText),
+	incident := &client.Incident{Type: *incidentType, Name: *subject, Status: 0, Level: l, Details: string(bodyText), CreateInvestigation: true,
 		Labels: []client.Label{
 			{Value: *target, Type: "Email/from"},
 			{Value: string(bodyText), Type: "Email/text"},

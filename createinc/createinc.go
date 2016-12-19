@@ -88,7 +88,7 @@ func main() {
 	if l == 0 {
 		l = 1
 	}
-	incident := &client.Incident{Type: *incidentType, Name: *name, Status: 0, Level: l, Details: *details}
+	incident := &client.Incident{Type: *incidentType, Name: *name, Status: 0, Level: l, Details: *details, CreateInvestigation: true}
 	if *labels != "" {
 		lParts := strings.Split(*labels, ",")
 		for _, lPart := range lParts {

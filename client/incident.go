@@ -72,6 +72,8 @@ type Incident struct {
 	PlaybookID string `json:"playbookId"`
 	// When was this activated
 	DueDate time.Time `json:"dueDate,omitempty"`
+	// Should we automagically create the investigation
+	CreateInvestigation bool `json:"createInvestigation"`
 }
 
 type idVersion struct {
