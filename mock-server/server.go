@@ -1,41 +1,41 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
-	"io/ioutil"
-	"encoding/json"
-	"net/http"
 	"strconv"
-	"bytes"
-	"io"
 )
 
 var (
 	folder = flag.String("folder", ".", "The location of the responses and routes files")
-	port = flag.String("port", "5050", "The port to listen on")
+	port   = flag.String("port", "5050", "The port to listen on")
 )
 
 type param struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	Mandatory bool `json:"mandatory"`
+	Name      string `json:"name"`
+	Type      string `json:"type"`
+	Mandatory bool   `json:"mandatory"`
 }
 
 type route struct {
-	Path string `json:"path"` // Path we should listen to
-	Method string `json:"method"` // Method we expect
+	Path       string  `json:"path"`       // Path we should listen to
+	Method     string  `json:"method"`     // Method we expect
 	Parameters []param `json:"parameters"` // Parameters we should accept and check
-	Request string `json:"request"` // Request body we should get
-	Status int `json:"status"`
-	Response string `json:"response"` // Response file - assumed to be in the same folder
-	Headers string `json:"headers"` // Headers to return - can also include cookies, etc. - JSON format
+	Request    string  `json:"request"`    // Request body we should get
+	Status     int     `json:"status"`
+	Response   string  `json:"response"` // Response file - assumed to be in the same folder
+	Headers    string  `json:"headers"`  // Headers to return - can also include cookies, etc. - JSON format
 }
 
 type header struct {
-	Name string `json:"name"`
+	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 
@@ -137,6 +137,6 @@ func main() {
 	err = json.Unmarshal(routesData, &routes)
 	check(err)
 	h := &handler{routes: routes}
-	err = http.ListenAndServe(":" + *port, h)
+	err = http.ListenAndServe(":"+*port, h)
 	check(err)
 }

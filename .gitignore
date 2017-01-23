@@ -27,3 +27,11 @@ tags
 
 uploader/uploader
 phishing/phishing
+createinc/createinc
+mock-server/mock-server
+bluecoatContentServer/bluecoatContentServer
+bluecoatContentServer/bccs.db
+
+.idea/
+projectFilesBackup/
+tools.iml
