@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+import json
 from requests import Session
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from requests.packages.urllib3 import disable_warnings
@@ -57,3 +58,10 @@ class Client:
                 "details": "Some incident details"}
 
         return self.req("POST", "incident", "", data).content
+
+    def SearchIncidents(self, page, size, query):
+        data = {'userFilter': True, 'filter': {'page': page, 'size': size, 'query': query, 'andOp': True, 'sort': [{'field':'id', 'asc': False}]}}
+        r = self.req("POST", "incidents/search", "", data)
+        if r.status_code != 200:
+            raise RuntimeError('Error searching incidents - %d (%s)' % (r.status_code, r.reason))
+        return json.loads(r.content)
