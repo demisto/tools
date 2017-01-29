@@ -44,18 +44,14 @@ def main():
     options = options_handler()
     c = DemistoClient.Client(options.user, options.password, options.server)
     c.Login()
-    incidents = c.SearchIncidents(options.page, options.size, options.filter)
-    print('Total #incidents: %d, incidents going to be updated: %d' % (incidents['total'], len(incidents['data'])))
-    print('ID          | Name')
-    print('============| =======================================================')
-    for i in incidents['data']:
-        print('%s%s| %s' % (i['id'], ' ' * (12 - len(i['id'])), i['name']))
-    print('\n')
-    proceed = raw_input('OK to proceed? ')
+    incidents = c.SearchIncidents(options.page, 0, options.filter)
+    print('Total #incidents: %d, incidents going to be updated' % (incidents['total']))
+    proceed = raw_input('OK to proceed (type y, yes or leave empty)? ')
     proceed = proceed.lower()
     if proceed == 'y' or proceed == 'yes' or proceed == '':
         if options.action == 'close':
             data = {'closeReason': options.closeReason, 'closeNotes': options.closeNotes, 'filter': {'page': options.page, 'size': options.size, 'query': options.filter}}
+            data['all'] = True
             if options.customFields:
                 data['CustomFields'] = json.loads(options.customFields)
             r = c.req('POST', 'incident/batchClose', '', data)
