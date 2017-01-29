@@ -51,9 +51,9 @@ def main():
     if proceed == 'y' or proceed == 'yes' or proceed == '':
         if options.action == 'close':
             data = {'closeReason': options.closeReason, 'closeNotes': options.closeNotes, 'filter': {'page': options.page, 'size': options.size, 'query': options.filter}}
+            data['all'] = True
             if options.customFields:
                 data['CustomFields'] = json.loads(options.customFields)
-                data['all'] = True
             r = c.req('POST', 'incident/batchClose', '', data)
             if r.status_code != 200:
                 raise RuntimeError('Error updating incidents - %d (%s)' % (r.status_code, r.reason))
