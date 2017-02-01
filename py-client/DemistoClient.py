@@ -49,15 +49,18 @@ class Client:
     def Logout(self):
         return self.req("POST", "logout", "", {})
 
-    def NewIncidentExample(self):
-        data = {"type": "Malware",
-                "name": "Test Incident",
-                "owner": "lior",
-                "severity": 2,
-                "labels": [{"type": "label1", "value": "value1"}],
-                "details": "Some incident details"}
-
-        return self.req("POST", "incident", "", data).content
+    def CreateIncident(self, inc_name, inc_type, inc_severity, inc_owner, inc_labels, inc_details, **kwargs ):
+        data = {"type": inc_type,
+                "name": inc_name,
+                "owner": inc_owner,
+                "severity": inc_severity,
+                "labels": inc_labels,
+                "details": inc_details}
+        for e in kwargs:
+            if e not in data:
+                data[e] = inc_extra[e]
+        return self.req("POST", "incident", "", data)     
+        
 
     def SearchIncidents(self, page, size, query):
         data = {'filter': {'page': page, 'size': size, 'query': query, 'sort': [{'field':'id', 'asc': False}]}}
