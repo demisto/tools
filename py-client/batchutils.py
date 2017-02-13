@@ -54,7 +54,7 @@ def main():
             data['all'] = True
             if options.customFields:
                 data['CustomFields'] = json.loads(options.customFields)
-            r = c.req('POST', 'incident/batchClose', '', data)
+            r = c.req('POST', 'incident/batchClose', data)
             if r.status_code != 200:
                 raise RuntimeError('Error updating incidents - %d (%s)' % (r.status_code, r.reason))
             rj = json.loads(r.content)
