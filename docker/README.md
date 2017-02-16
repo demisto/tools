@@ -1,5 +1,5 @@
 # Docker tool
-A tool to ease the creation of a Docker image with python libs
+A tool to ease the creation of a Docker image with python libs, it will create a Docker image from base image python:2.7
 
 ### How to create a new Docker image with Python libs
 You will need to have Docker installed in the machine you are running from
