@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/demisto/tools/client"
@@ -16,6 +18,7 @@ var (
 	password = flag.String("p", "", "Password to login to the server")
 	server   = flag.String("s", "", "Demisto server URL")
 	filter   = flag.String("f", "status:=2 and closed:>"+defaultStartDate(), "Filter for the mttr query")
+	group    = flag.String("g", "owner", "Which field to group by")
 	output   = flag.String("o", "mttr.csv", "Output csv file path")
 )
 
@@ -79,22 +82,50 @@ func main() {
 			continue
 		}
 		delta := incidents.Data[i].Closed.Sub(incidents.Data[i].Created)
-		owner := incidents.Data[i].OwnerID
-		if owner == "" {
-			owner = "dbot"
-		}
-		if _, ok := mttr[owner]; ok {
-			mttr[owner]["incidents"] = mttr[owner]["incidents"] + 1
-			mttr[owner]["total"] = mttr[owner]["total"] + int64(delta)
+		field := incidents.Data[i].OwnerID
+		if *group == "owner" {
+			if field == "" {
+				field = "dbot"
+			}
 		} else {
-			mttr[owner] = map[string]int64{"incidents": 1, "total": int64(delta)}
+			found := false
+			val := reflect.ValueOf(incidents.Data[i])
+			typ := val.Type()
+			for i := 0; i < typ.NumField(); i++ {
+				tag := typ.Field(i).Tag
+				jsonTag := tag.Get("json")
+				if jsonTag == *group || strings.Title(*group) == typ.Field(i).Name {
+					field = val.FieldByName(typ.Field(i).Name).String()
+					found = true
+					break
+				}
+			}
+			if !found {
+				for k, v := range incidents.Data[i].CustomFields {
+					if k == *group {
+						field = fmt.Sprintf("%v", v)
+						found = true
+						break
+					}
+				}
+			}
+			// If not found then it will default to owner
+			if !found {
+				field = ""
+			}
+		}
+		if _, ok := mttr[field]; ok {
+			mttr[field]["incidents"] = mttr[field]["incidents"] + 1
+			mttr[field]["total"] = mttr[field]["total"] + int64(delta)
+		} else {
+			mttr[field] = map[string]int64{"incidents": 1, "total": int64(delta)}
 		}
 	}
 	f, err := os.Create(*output)
 	check(err)
 	defer f.Close()
 	w := csv.NewWriter(f)
-	w.Write([]string{"Analyst", "Incidents", "MTTR"})
+	w.Write([]string{strings.Title(*group), "Incidents", "MTTR"})
 	for k, v := range mttr {
 		w.Write([]string{k, strconv.FormatInt(v["incidents"], 10), strconv.FormatInt(int64(time.Duration(v["total"]/v["incidents"]).Minutes()), 10)})
 	}

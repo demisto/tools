@@ -22,6 +22,9 @@ type Attachment struct {
 	Description string `json:"description"`
 }
 
+// CustomFields ...
+type CustomFields map[string]interface{}
+
 // Incident details.
 // An incident can be opened by us algorithmically or arrive from an external source like SIEM.
 // If you add fields, make sure to add them to the mapping as well
@@ -74,6 +77,8 @@ type Incident struct {
 	DueDate time.Time `json:"dueDate,omitempty"`
 	// Should we automagically create the investigation
 	CreateInvestigation bool `json:"createInvestigation"`
+	// This field must have empty json key
+	CustomFields `json:""`
 }
 
 type idVersion struct {
