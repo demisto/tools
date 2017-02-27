@@ -129,6 +129,12 @@ type SearchIncidentsData struct {
 	FetchInsight bool           `json:"fetchInsights"`
 }
 
+// IncidentSearchResponse is the response from the search
+type IncidentSearchResponse struct {
+	Total int64      `json:"total"`
+	Data  []Incident `json:"data"`
+}
+
 // CreateIncident in Demisto
 func (c *Client) CreateIncident(inc *Incident) (*Incident, error) {
 	data, err := json.Marshal(inc)
@@ -141,8 +147,14 @@ func (c *Client) CreateIncident(inc *Incident) (*Incident, error) {
 }
 
 // Incidents search based on provided filter
-func (c *Client) Incidents(filter *IncidentFilter) ([]Incident, error) {
-	return nil, nil
+func (c *Client) Incidents(filter *IncidentFilter) (*IncidentSearchResponse, error) {
+	data, err := json.Marshal(&SearchIncidentsData{Filter: *filter, FilterByUser: false, FetchInsight: false})
+	if err != nil {
+		return nil, err
+	}
+	res := &IncidentSearchResponse{}
+	err = c.req("POST", "incidents/search", "", bytes.NewBuffer(data), res)
+	return res, err
 }
 
 type investigation struct {
