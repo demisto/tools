@@ -79,7 +79,7 @@ func (r *Router) registerHandlers() {
 	// Download local rules DB
 	r.Get("/db", r.fileHandlers.ThenFunc(r.appContext.dbHandler))
 	r.Post("/db/add", r.authHandlers.Append(jsonContentTypeHandler, bodyHandler(domain.Rule{})).ThenFunc(r.appContext.addRule))
-	r.Post("/db/remove", r.authHandlers.Append(jsonContentTypeHandler, bodyHandler(domain.Rule{})).ThenFunc(r.appContext.addRule))
+	r.Post("/db/remove", r.authHandlers.Append(jsonContentTypeHandler, bodyHandler(domain.Rule{})).ThenFunc(r.appContext.removeRule))
 }
 
 func wrapHandler(h http.Handler) httprouter.Handle {
