@@ -22,6 +22,9 @@ type Attachment struct {
 	Description string `json:"description"`
 }
 
+// CustomFields ...
+type CustomFields map[string]interface{}
+
 // Incident details.
 // An incident can be opened by us algorithmically or arrive from an external source like SIEM.
 // If you add fields, make sure to add them to the mapping as well
@@ -74,6 +77,8 @@ type Incident struct {
 	DueDate time.Time `json:"dueDate,omitempty"`
 	// Should we automagically create the investigation
 	CreateInvestigation bool `json:"createInvestigation"`
+	// This field must have empty json key
+	CustomFields `json:""`
 }
 
 type idVersion struct {
@@ -129,6 +134,12 @@ type SearchIncidentsData struct {
 	FetchInsight bool           `json:"fetchInsights"`
 }
 
+// IncidentSearchResponse is the response from the search
+type IncidentSearchResponse struct {
+	Total int64      `json:"total"`
+	Data  []Incident `json:"data"`
+}
+
 // CreateIncident in Demisto
 func (c *Client) CreateIncident(inc *Incident) (*Incident, error) {
 	data, err := json.Marshal(inc)
@@ -141,8 +152,14 @@ func (c *Client) CreateIncident(inc *Incident) (*Incident, error) {
 }
 
 // Incidents search based on provided filter
-func (c *Client) Incidents(filter *IncidentFilter) ([]Incident, error) {
-	return nil, nil
+func (c *Client) Incidents(filter *IncidentFilter) (*IncidentSearchResponse, error) {
+	data, err := json.Marshal(&SearchIncidentsData{Filter: *filter, FilterByUser: false, FetchInsight: false})
+	if err != nil {
+		return nil, err
+	}
+	res := &IncidentSearchResponse{}
+	err = c.req("POST", "incidents/search", "", bytes.NewBuffer(data), res)
+	return res, err
 }
 
 type investigation struct {

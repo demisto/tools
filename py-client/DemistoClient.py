@@ -14,6 +14,8 @@ class Client:
     def __init__(self, username, password, server):
         if not (username and password and server):
             raise ValueError("You must provide all three parameters")
+        if not server.find('https://') == 0 and not server.find('http://') == 0:
+            raise ValueError("Server must be a url (e.g. 'https://<server>' or 'http://<server>')")
         if not server[-1] == '/':
             server += '/'
         try:
@@ -27,9 +29,9 @@ class Client:
         self.server = server
         self.session = s
 
-    def req(self, method, path, contentType, data):
+    def req(self, method, path, data):
         h = {"Accept": "application/json",
-             "Content-type": contentType if contentType else "application/json",
+             "Content-type": "application/json",
              Client.XSRF_TOKEN_KEY: self.token}
 
         try:
@@ -44,24 +46,27 @@ class Client:
     def Login(self):
         data = {'user': self.username,
                 'password': self.password}
-        return self.req("POST", "login", "", data)
+        return self.req("POST", "login", data)
 
     def Logout(self):
-        return self.req("POST", "logout", "", {})
+        return self.req("POST", "logout", {})
 
-    def NewIncidentExample(self):
-        data = {"type": "Malware",
-                "name": "Test Incident",
-                "owner": "lior",
-                "severity": 2,
-                "labels": [{"type": "label1", "value": "value1"}],
-                "details": "Some incident details"}
-
-        return self.req("POST", "incident", "", data).content
+    def CreateIncident(self, inc_name, inc_type, inc_severity, inc_owner, inc_labels, inc_details, **kwargs ):
+        data = {"type": inc_type,
+                "name": inc_name,
+                "owner": inc_owner,
+                "severity": inc_severity,
+                "labels": inc_labels,
+                "details": inc_details}
+        for e in kwargs:
+            if e not in data:
+                data[e] = kwargs[e]
+        return self.req("POST", "incident", data)     
+        
 
     def SearchIncidents(self, page, size, query):
         data = {'filter': {'page': page, 'size': size, 'query': query, 'sort': [{'field':'id', 'asc': False}]}}
-        r = self.req("POST", "incidents/search", "", data)
+        r = self.req("POST", "incidents/search", data)
         if r.status_code != 200:
             raise RuntimeError('Error searching incidents - %d (%s)' % (r.status_code, r.reason))
         return json.loads(r.content)
