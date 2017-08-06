@@ -24,6 +24,7 @@ var (
 	level        = flag.String("level", "low", "Incident level - low/medium/high/critical")
 	incidentType = flag.String("type", "Phishing", "Incident type - default/phishing/malware/...")
 	labels       = flag.String("labels", "", "The labels to add to the incident in the form of name=value,name=value")
+	account      = flag.String("account", "", "When in MT env, define an account to create the incident in")
 )
 
 var (
@@ -118,13 +119,13 @@ func main() {
 			}
 		}
 	}
-	inc, err := c.CreateIncident(incident)
+	inc, err := c.CreateIncident(incident, *account)
 	check(err)
 	if *attachment != "" {
 		at, err := os.Open(*attachment)
 		check(err)
 		defer at.Close()
-		_, err = c.IncidentAddAttachment(inc, at, filepath.Base(*attachment), "Mail attachment")
+		_, err = c.IncidentAddAttachment(inc, at, filepath.Base(*attachment), "Mail attachment", *account)
 		check(err)
 	}
 }

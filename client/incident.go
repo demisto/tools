@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"time"
@@ -141,13 +142,18 @@ type IncidentSearchResponse struct {
 }
 
 // CreateIncident in Demisto
-func (c *Client) CreateIncident(inc *Incident) (*Incident, error) {
+func (c *Client) CreateIncident(inc *Incident, account string) (*Incident, error) {
 	data, err := json.Marshal(inc)
 	if err != nil {
 		return nil, err
 	}
 	res := &Incident{}
-	err = c.req("POST", "incident", "", bytes.NewBuffer(data), res)
+
+	url := "incident"
+	if account != "" {
+		url = fmt.Sprintf("acc_%s/incident", account)
+	}
+	err = c.req("POST", url, "", bytes.NewBuffer(data), res)
 	return res, err
 }
 
@@ -168,7 +174,7 @@ type investigation struct {
 }
 
 // IncidentAddAttachment adds an attachment to a given incident
-func (c *Client) IncidentAddAttachment(inc *Incident, file io.Reader, name, comment string) (*Incident, error) {
+func (c *Client) IncidentAddAttachment(inc *Incident, file io.Reader, name, comment string, account string) (*Incident, error) {
 	b := &bytes.Buffer{}
 	writer := multipart.NewWriter(b)
 	part, err := writer.CreateFormFile("file", name)
@@ -191,7 +197,11 @@ func (c *Client) IncidentAddAttachment(inc *Incident, file io.Reader, name, comm
 	}
 	writer.Close()
 	res := &Incident{}
-	err = c.req("POST", "incident/upload/"+inc.ID, writer.FormDataContentType(), b, res)
+	url := "incident/upload/" + inc.ID
+	if account != "" {
+		url = fmt.Sprintf("acc_%s/%s", account, url)
+	}
+	err = c.req("POST", url, writer.FormDataContentType(), b, res)
 	return res, err
 }
 

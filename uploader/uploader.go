@@ -37,6 +37,7 @@ var (
 	extraVerbose  = flag.Bool("vv", false, "Very verbose - should we print details about every file")
 	limit         = flag.Int("limit", -1, "Count of files we should limit ourselves to")
 	test          = flag.Bool("test", false, "Should we just iterate on the files without uploading them")
+	account      = flag.String("account", "", "When in MT env, define an account to create the incident in")
 )
 
 var (
@@ -154,7 +155,7 @@ func main() {
 			var subDirsList []string
 			var currInvestigation *client.Investigation
 			if !*test {
-				inc, err := c.CreateIncident(&client.Incident{Type: "Malware", Name: currName, Status: 0, Level: 1, Targets: []client.Target{{Value: currName, Type: "Host"}}})
+				inc, err := c.CreateIncident(&client.Incident{Type: "Malware", Name: currName, Status: 0, Level: 1, Labels: []client.Label{{Value: currName, Type: "Host"}}}, *account)
 				check(err)
 				if *verbose {
 					fmt.Printf("Incident %s created with ID %s\n", currName, inc.ID)
