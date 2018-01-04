@@ -15,7 +15,6 @@ RUN pip install lxml
 RUN apk add libxml2
 RUN apk add libxslt
 RUN apk add python-dev
-RUN apk add libxslt-dev
 RUN apk add libxml2-dev
 
 RUN pip install --no-cache-dir -r requirements.txt
