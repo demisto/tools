@@ -7,4 +7,8 @@ RUN echo "ipv6" >> /etc/modules
 
 RUN apk update
 
+RUN apk update ncurses
+
+RUN apk upgrade ncurses
+
 RUN pip install --no-cache-dir -r requirements.txt
