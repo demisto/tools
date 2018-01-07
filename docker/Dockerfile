@@ -9,10 +9,4 @@ RUN apk update
 
 RUN apk upgrade --update-cache --available
 
-RUN apk add --update --no-cache g++ gcc libxslt-dev
-
-RUN pip install lxml
-
-RUN apk add --no-cache --update binutils
-
 RUN pip install --no-cache-dir -r requirements.txt
