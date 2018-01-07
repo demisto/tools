@@ -7,14 +7,12 @@ RUN echo "ipv6" >> /etc/modules
 
 RUN apk update
 
-RUN apk upgrade
+RUN apk upgrade --update-cache --available
 
 RUN apk add --update --no-cache g++ gcc libxslt-dev
 
 RUN pip install lxml
-RUN apk add libxml2
-RUN apk add libxslt
-RUN apk add python-dev
-RUN apk add libxml2-dev
+
+RUN apk add --no-cache --update binutils
 
 RUN pip install --no-cache-dir -r requirements.txt
