@@ -1,6 +1,7 @@
-FROM python:2.7.14-alpine3.7
+FROM python:2.7.15-alpine3.8
 
 RUN pip install --upgrade pip
+
 COPY requirements.txt .
 
 RUN echo "ipv6" >> /etc/modules
